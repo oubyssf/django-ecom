@@ -15,7 +15,7 @@ A simple e-commerce store blueprint built with Django. Includes basic features l
 - **Django**: Web framework.
 - **SQLite**: Database.
 - **JavaScript, HTML/CSS**: Frontend.
-- **PayPal REST API**: Payment processing.
+- **PayPal REST API**: Payment processing. (https://developer.paypal.com/api/rest/authentication/)
 
 ## Setup
 
