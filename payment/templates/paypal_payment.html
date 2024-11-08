@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+<!-- Add this to the head of your HTML -->
+<script src="https://www.paypal.com/sdk/js?client-id={{ PAYPAL_CLIENT_ID }}&currency=USD"></script>
+
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Billing</h1>
+        </div>
+    </div>
+</header>
+<br><br>
+<div class="container col-md-6">
+    <div class="card">
+        <div class="card-header">
+          Order Summary
+        </div>
+        {% for product in cart_products %}
+            <div class="card-body">
+                {% if product.on_sale %}
+                    <h5 class="card-title">{{product.name}} - <span>${{product.sale_price}}</span></h5>
+                {% else %}
+                    <h5 class="card-title">{{product.name}} - <span>${{product.price}}</span></h5>
+                {% endif %}
+                <small>Quantity: {{ cart_quantities|get_item:product.id }}</small>
+            </div>
+        {% endfor %}
+        
+        <div class="card-footer">
+            <strong>Total: ${{total_price}}</strong>
+        </div>
+        
+    </div>
+    <br><br>
+    <div class="card">
+        <div class="card-header">
+            Shipping Info
+        </div>
+        <div class="card-body">
+            Full Name: {{shipping_info.full_name}} <br>   
+            Address 1: {{shipping_info.address1}} <br>
+            Address 2: {{shipping_info.address2}} <br>
+            City: {{shipping_info.city}} <br>
+            Zipcode: {{shipping_info.zipcode}} <br>
+            Country: {{shipping_info.country}} <br>
+        </div>     
+        <div class="card-footer">
+            <a class="btn btn-secondary" href="{% url 'payment_checkout' %}">Update Shipping Info</a>
+        </div>
+    </div>
+    <br><br>
+    <div class="row">
+        <form method="post" id='dummy_payment_form'>
+            {% csrf_token %}
+            {{ form }}
+        </form>
+        <center>
+            <div id="paypal-button"></div>
+        </center>
+    </div>
+    <br><br>
+    <!-- <div class="row">
+        <h5>Billing Info</h5>
+        <br><br>
+        <form method="POST" action="{% url 'payment_order' %}">
+            {% csrf_token %}
+            <button class="btn btn-primary">Pay Now</button>
+        </form>
+    </div> -->
+</div>
+<br><br>
+<script>
+    let paymentID = $('#id_order_id')[0];
+    let paymentForm = $('#dummy_payment_form')[0];
+    paypal.Buttons({
+        createOrder: function (data, actions) {
+            // This function sets up the details of the transaction, including the amount and line item details.
+            return actions.order.create({
+                intent: "CAPTURE",
+                purchase_units: [{
+                    amount: {
+                        value: '{{ amount }}',
+                        currency_code: '{{ currency }}',
+                    },
+                    description: '{{ description }}',
+                }],
+            });
+        },
+        onApprove: function (data, actions) {
+            // This function captures the funds from the transaction.
+            return actions.order.capture().then(function (details) {
+                // This function is called after successful payment.
+                // First, hide the paypay buttons
+                $('#paypal-button').addClass('hidden');
+                // then populate dummy form order_id                    
+                paymentID.value = data.orderID;
+                //and finally - submit the dummy form to the backend
+                paymentForm.submit();
+            });
+        }
+    }).render('#paypal-button');
+    //This function displays Smart Payment Buttons on your web page.
+</script>
+{% endblock %}

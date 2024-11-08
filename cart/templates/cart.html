@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Shoping Cart</h1>
+        </div>
+    </div>
+</header>
+
+<section class="h-100 h-custom">
+    <div class="container h-100 py-5">
+      <div class="row d-flex justify-content-center align-items-center h-100" id="cart">
+        {% if cart_products %}
+        <div class="col" id="cart_summary">
+  
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col" class="h5">Shopping Bag</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Price</th>
+                  <th scope="col"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for product in cart_products %}
+                <tr id="tr-{{product.id}}" class="product-tr">
+                  <th scope="row">
+                    <div class="d-flex align-items-center">
+                      <img src="{{product.image.url}}" class="img-fluid rounded-3"
+                        style="width: 120px; max-height: 150px;" alt="Book">
+                      <div class="flex-column ms-4">
+                        <p class="mb-2">{{product.name}}</p>
+                      </div>
+                    </div>
+                  </th>
+                  <td class="align-middle">
+                    <div class="d-flex flex-row">
+                      <button data-mdb-button-init data-mdb-ripple-init class="btn btn-link px-2"
+                        onclick="this.parentNode.querySelector('input[type=number]').stepDown()">
+                        <i class="fas fa-minus"></i>
+                      </button>
+                      
+                      {% if product.on_sale %}
+                      <input min="1" data-index="{{product.id}}" data-price="{{product.sale_price}}" name="quantity" value="{{ cart_quantities|get_item:product.id }}" type="number"
+                      class="form-control form-control-sm quantity" style="width: 50px;" />
+                      {% else %}
+                      <input min="1" data-index="{{product.id}}" data-price="{{product.price}}" name="quantity" value="{{ cart_quantities|get_item:product.id }}" type="number"
+                      class="form-control form-control-sm quantity" style="width: 50px;" />
+                      {% endif %}
+                      <button data-mdb-button-init data-mdb-ripple-init class="btn btn-link px-2"
+                        onclick="this.parentNode.querySelector('input[type=number]').stepUp()">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="align-middle">
+                    {% if product.on_sale %}
+                    <span class="text-decoration-line-through">${{product.price}}</span>
+                    <p class="mb-0" style="font-weight: 500;" id="price-{{product.id}}" data-price="{{product.price}}">${{product.sale_price}}</p>
+                    {% else %}
+                    <p class="mb-0" style="font-weight: 500;" id="price-{{product.id}}" data-price="{{product.price}}">${{product.price}}</p>
+                    {% endif %}
+                  </td>
+                  <td class="align-middle">
+                    <button type="button" class="btn-close text-bg-danger remove" data-index="{{product.id}}" aria-label="Close"></button>
+                  </td>
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        <center>
+          <div class="card shadow-2-strong mb-5 mb-lg-0 col-md-6" style="border-radius: 16px;">
+            <div class="card-body p-4">
+  
+              <div class="row">
+                <div class="col-12">
+                  
+                  <div class="d-flex justify-content-between mb-4">
+                    <p class="mb-2">Total (tax included)</p>
+                    <p class="mb-2 total-price">${{total_price}}</p>
+                  </div>
+
+                  <hr class="my-4">
+                  
+                  <button  id="checkout" type="button" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-block btn-lg">
+                    <div class="d-flex justify-content-between">
+                      <span>Checkout</span>
+                      &nbsp;
+                      <span class="total-price">${{total_price}}</span>
+                    </div>
+                  </button>
+
+                  <button  id="update-cart" type="button" data-mdb-button-init data-mdb-ripple-init class="btn btn-secondary btn-block btn-lg">
+                    <div class="d-flex justify-content-between">
+                      <span>Save cart</span>
+                    </div>
+                  </button>
+                  
+                </div>
+              </div>
+  
+            </div>
+          </div>
+        </center>
+        </div>
+        {% else %}
+        <p>No products on cart</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  <script>
+    totalPrice = Number("{{total_price}}")
+    quantities = JSON.parse("{{ cart_quantities }}".replaceAll('&#x27;', '"'))
+
+    const updateTotalPrice = (price) => {
+      $('.total-price').text(function() {
+          return `$${price}`
+      });
+    }
+
+    $('input.quantity').on('change', (e) => {
+      product_id = e.target.dataset.index
+      price = Number(e.target.dataset.price)
+      nqty = Number(e.target.value)
+      oqty = Number(quantities[product_id])
+      diff = nqty - oqty
+      quantities[product_id] = nqty
+      totalPrice += price * diff
+      totalPrice = Math.round(totalPrice * 100) / 100
+      updateTotalPrice(totalPrice)
+    });
+
+    $('#checkout').on('click', (e) => {
+        e.preventDefault();
+        let quantities = {}
+        for (const input of $('input.quantity')) {
+            product_id = input.dataset.index
+            quantity = input.value
+            quantities[product_id] = quantity
+        }
+
+        $.ajax({
+            method: 'POST',
+            url: "{% url 'cart_update' %}",
+            data: {
+                csrfmiddlewaretoken: "{{csrf_token}}",
+                action: 'post',
+                quantities: JSON.stringify(quantities),
+            },
+
+            success: function(){
+              location.replace("{% url 'payment_checkout' %}")
+            }
+        });
+    });
+
+    $(document).on('click', '#update-cart', (e) => {
+        e.preventDefault()
+        let quantities = {}
+        for (const input of $('input.quantity')) {
+            product_id = input.dataset.index
+            quantity = input.value
+            quantities[product_id] = quantity
+        }
+
+        $.ajax({
+            method: 'POST',
+            url: "{% url 'cart_update' %}",
+            data: {
+                csrfmiddlewaretoken: "{{csrf_token}}",
+                action: 'post',
+                quantities: JSON.stringify(quantities),
+            },
+
+            success: function(data){
+              totalPrice = data.total_price
+              updateTotalPrice(totalPrice)
+              showMessage(`Successfully saved the cart`, "success")
+            }
+        });
+    });
+
+    $('button.remove').on('click', (e) => {
+        e.preventDefault();
+        $.ajax({
+            method: 'POST',
+            url: "{% url 'cart_delete' %}",
+            data: {
+                csrfmiddlewaretoken: "{{csrf_token}}",
+                action: 'post',
+                product_id: e.currentTarget.dataset.index,
+            },
+            success: function(data) {
+                product_id = data.product_id
+                delete quantities[product_id]
+                
+                $(`#tr-${product_id}`).remove()
+                if ($('tr.product-tr').length == 0) {
+                  $('#cart_summary').remove()
+                  $('#cart').append('<p>No products on cart</p>')
+                }
+                document.getElementById('cart-quantity').textContent = data.qty
+                
+                totalPrice = data.total_price
+                updateTotalPrice(data.total_price)
+                showMessage(`Successfully removed from cart`, "success")
+            }
+        })
+    })
+</script>
+{% endblock %}

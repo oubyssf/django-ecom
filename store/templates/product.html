@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+<section class="py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="row gx-4 gx-lg-5 align-items-center">
+            <div class="col-md-6"><img class="card-img-top mb-5 mb-md-0" src="{{product.image.url}}" alt="..."></div>
+            <div class="col-md-6">
+                <div class="small mb-1">{{product.category}}</div>
+                <h1 class="display-5 fw-bolder">{{product.name}}</h1>
+                <div class="fs-5 mb-5">
+                    {% if product.on_sale %}
+                    <span class="text-decoration-line-through">${{product.price}}</span>
+                    <span>${{product.sale_price}}</span>
+                    {% else %}
+                    <span>${{product.price}}</span>
+                    {% endif %}
+                </div>
+                <p class="lead">{{product.description}}</p>
+                <div class="d-flex flex-row">
+                    <button data-mdb-button-init data-mdb-ripple-init class="btn btn-link px-2"
+                      onclick="this.parentNode.querySelector('input[type=number]').stepDown()">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                    <input id="product-qty" min="1" name="quantity" value="{{ cart.cart|get_item:product.id|default:1 }}" type="number"
+                      class="form-control form-control-sm" style="width: 50px;" />
+                    
+                    <button data-mdb-button-init data-mdb-ripple-init class="btn btn-link px-2"
+                      onclick="this.parentNode.querySelector('input[type=number]').stepUp()">
+                      <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <br>
+                <div class="d-flex">
+                    <button class="btn btn-outline-dark flex-shrink-0" value="{{product.id}}" id="add-cart" type="button">
+                        <i class="bi-cart-fill me-1"></i>
+                        Add to cart
+                    </button>
+                </div>
+                <script>
+                    $(document).on('click', '#add-cart', function(e){
+                        e.preventDefault();
+                        $.ajax({
+                            method: "POST",
+                            url: "{% url 'cart_add' %}",
+                            data: {
+                                product_id: $('#add-cart').val(),
+                                product_qty: $('#product-qty').val(),
+                                csrfmiddlewaretoken: "{{ csrf_token }}",
+                                action: 'post'
+                            },
+                            
+                            success: function(data){
+                                console.log(data)
+                                document.getElementById('cart-quantity').textContent = data.qty
+                                if(data.show_msg){
+                                    showMessage(`Successfully added to cart`, "success")
+                                }
+                            },
+
+                            error: function(){
+
+                            }
+                        });
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

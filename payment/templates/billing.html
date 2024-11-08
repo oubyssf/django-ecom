@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load mytags %}
+{% block content %}
+<!-- Add this to the head of your HTML -->
+<script src="https://www.paypal.com/sdk/js?client-id={{ PAYPAL_CLIENT_ID }}&currency=USD"></script>
+
+<!-- Header-->
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Billing</h1>
+        </div>
+    </div>
+</header>
+<br><br>
+<div class="container col-md-6">
+    <div class="card">
+        <div class="card-header">
+          Order Summary
+        </div>
+        {% for product in cart_products %}
+            <div class="card-body">
+                {% if product.on_sale %}
+                    <h5 class="card-title">{{product.name}} - <span>${{product.sale_price}}</span></h5>
+                {% else %}
+                    <h5 class="card-title">{{product.name}} - <span>${{product.price}}</span></h5>
+                {% endif %}
+                <small>Quantity: {{ cart_quantities|get_item:product.id }}</small>
+            </div>
+        {% endfor %}
+        
+        <div class="card-footer">
+            <strong>Total: ${{total_price}}</strong>
+        </div>
+        
+    </div>
+    <br><br>
+    <div class="card">
+        <div class="card-header">
+            Shipping Info
+        </div>
+        <div class="card-body">
+            Full Name: {{shipping_info.full_name}} <br>   
+            Address 1: {{shipping_info.address1}} <br>
+            Address 2: {{shipping_info.address2}} <br>
+            City: {{shipping_info.city}} <br>
+            Zipcode: {{shipping_info.zipcode}} <br>
+            Country: {{shipping_info.country}} <br>
+        </div>     
+        <div class="card-footer">
+            <a class="btn btn-secondary" href="{% url 'payment_checkout' %}">Update Shipping Info</a>
+        </div>
+    </div>
+    <br><br>
+    <div class="row">
+        <center>
+            <div id="paypal-button"></div>
+        </center>
+    </div>
+</div>
+<br><br>
+<script>
+    // document.getElementById("loading").classList.add("hide");
+    // document.getElementById("content").classList.remove("hide");
+    let alerts = document.getElementById("alerts");
+    const headers = {"X-CSRFToken": "{{csrf_token}}", "Content-Type": "application/json; charset=utf-8" };
+    let paypal_buttons = paypal.
+    Buttons({
+        createOrder: function (data, actions) {
+            const url = `${window.location.origin}/payment/create_order/`;            
+            return fetch(url, {method: "post", headers}).
+            then((response) => response.json()).
+            then((order) => { 
+                console.log('Order created: ', order)
+                return order.id; 
+            }).
+            catch((error) => console.error(error));
+        },
+        onApprove: function (data, actions) {
+            let order_id = data.orderID;
+            const url = `${window.location.origin}/payment/complete_order/`;
+            return fetch(url, {
+                method: "post", 
+                headers,
+                body: JSON.stringify({"order_id": order_id})
+            }).
+            then((response) => response.json()).
+            then((order_details) => {
+                console.log('Order captured:', order_details); //https://developer.paypal.com/docs/api/orders/v2/#orders_capture!c=201&path=create_time&t=response
+                alerts.innerHTML = `<div class='ms-alert ms-action'>Thank you ` + order_details.payer.name.given_name + ` ` + order_details.payer.name.surname + ` for your payment of ` + order_details.purchase_units[0].payments.captures[0].amount.value + ` ` + order_details.purchase_units[0].payments.captures[0].amount.currency_code + `!</div>`;
+                paypal_buttons.close();
+                showMessage('Order placed successfuly', 'success');
+                setTimeout(() => {
+                    window.location = order_details.return_url
+                }, 3000)
+            }).
+            catch((error) => {
+                console.error(error);
+                showMessage('An error occured', 'danger')
+            });
+        },
+        onError: function(err) {
+            console.error(err)
+            showMessage('Payment failed', 'danger')
+        }
+    });
+    paypal_buttons.render('#paypal-button');
+</script>
+{% endblock %}
