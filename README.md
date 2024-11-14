@@ -21,7 +21,7 @@ A simple e-commerce store blueprint built with Django. Includes basic features l
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/django-ecom.git
+   git clone [https://github.com/oubyssf/django-ecom.git]
    cd django-ecom
 2. **Create and activate a virtual environment**:
     ```bash
